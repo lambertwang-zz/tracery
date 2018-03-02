@@ -1,6 +1,7 @@
 package main
 
 type scene struct {
-	shapes []shape
-	lights []light
+	shapes       []shape
+	lights       []light
+	ambientLight float64
 }

@@ -2,9 +2,10 @@ Tracery
 =======
 
 A concurrent raytracer written in Go. Currently limited in features.
-Supports:
-RGSS
-Lambert Diffuse Shading
+Supports:  
+RGSS  
+Depth of Field  
+Diffuse and Specular Shading  
 
-![Tracery example](test_2.png)
+![Tracery example](test_rgss_dof.png)
 

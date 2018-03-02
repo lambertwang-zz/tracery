@@ -4,9 +4,10 @@ import "math"
 
 type pointLight struct {
 	center vector
+	radius float64
 }
 
-func (l pointLight) light(x ray, normal vector, s scene) float64 {
+func (l pointLight) light(x ray, normal vector, s scene) (ray, float64) {
 	// Compute intersections
 	nearestT := math.MaxFloat64
 	toRay := lineToRay(x.origin, l.center)
@@ -24,8 +25,11 @@ func (l pointLight) light(x ray, normal vector, s scene) float64 {
 	v := subtractVector(l.center, x.origin)
 
 	if v.magnitude() > subtractVector(l.center, toRay.incident(nearestT)).magnitude() {
-		return 0.0
+		return toRay, 0.0
 	}
 
-	return math.Max(0.0, dotProduct(normal, toRay.dir))
+	distance := subtractVector(x.origin, l.center).magnitude()
+	attenuation := 1.0 / (1.0 + (2.0/l.radius)*distance + (1.0/math.Pow(l.radius, 2))*math.Pow(distance, 2))
+
+	return toRay, attenuation
 }

@@ -45,6 +45,10 @@ func (v vector) norm() vector {
 	return v.scale(1.0 / v.magnitude())
 }
 
+func (v vector) neg() vector {
+	return vector{-v.x, -v.y, -v.z}
+}
+
 func (r ray) incident(t float64) vector {
 	return addVectors(r.origin, r.dir.scale(t))
 }

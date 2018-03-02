@@ -11,6 +11,9 @@ type sphere struct {
 	radius float64
 }
 
+func (s sphere) shouldTest(ray ray) bool {
+	return dotProduct(subtractVector(s.center, ray.origin), ray.dir) > 0
+}
 func (s sphere) intersect(ray ray) (float64, float64) {
 	v := subtractVector(ray.origin, s.center)
 	vd := dotProduct(v, ray.dir)
@@ -25,17 +28,14 @@ func (s sphere) intersect(ray ray) (float64, float64) {
 	return -vd + sqrtd, -vd - sqrtd
 }
 
-func (s sphere) reflect(x ray, t float64, sc scene) (ray, color.RGBA, float64) {
+func (s sphere) reflect(x ray, t float64, sc scene) (ray, color.RGBA, float64, vector) {
 	// n = (y - c) / || y - c|| where y = s + td
 	incident := subtractVector(addVectors(x.origin, x.dir.scale(t)), s.center)
 	normal := incident.norm()
 	reflection := subtractVector(x.dir, normal.scale(2*(dotProduct(normal, x.dir))))
-	outRay := ray{addVectors(incident, s.center), reflection}
+	return ray{addVectors(incident, s.center), reflection}, s.color, s.reflectance, normal
+}
 
-	var lightVal float64
-	for _, light := range sc.lights {
-		lightVal += light.light(outRay, normal, sc)
-	}
-
-	return outRay, scaleColor(s.color, lightVal), s.reflectance
+func (s sphere) getMaterial() material {
+	return s.material
 }
