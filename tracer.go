@@ -8,48 +8,58 @@ import (
 const reflectanceThreshold = 0.01
 
 type traceParams struct {
+	rayCast     ray
 	reflections int
 	reflectance float64
-	color       color.RGBA
+	refractance float64
 }
 
 func traceSample(sa sample, t traceParams, s scene) (color.RGBA, float64) {
-	c := make([]color.RGBA, len(sa.casts))
+	c := make([]floatColor, len(sa.casts))
+
 	outDepth := -1.0
 	for i, r := range sa.casts {
-		c[i], outDepth = trace(r, t, s)
+		newParams := traceParams{
+			r, t.reflections, t.reflectance, t.refractance,
+		}
+		c[i], outDepth = trace(newParams, s)
 	}
-	return meanColor(c), outDepth
+	return meanColor(c).toRgba(), outDepth
 }
 
-func trace(ray ray, t traceParams, s scene) (color.RGBA, float64) {
-	// Compute intersections
-	nearestT := math.MaxFloat64
-	index := -1
+func nearestIntersection(r ray, s scene) (nearestT float64, index int) {
+	nearestT = math.MaxFloat64
+	index = -1
 	for i, shape := range s.shapes {
-		t0, t1 := shape.intersect(ray)
-		// Assume ray cannot cast from inside of the sphere
-		if t0 > 0.01 && t1 > 0.01 {
-			closeT := math.Min(t0, t1)
-			if closeT < nearestT {
-				nearestT = closeT
+		t := shape.intersect(r)
+		// Use some minimum distance the ray must travel before it can intersect
+		if t > 0.001 {
+			if t < nearestT {
+				nearestT = t
 				index = i
 			}
 		}
 	}
+	return
+}
+
+func trace(t traceParams, s scene) (floatColor, float64) {
+	if t.reflectance <= 0.001 {
+		return floatColor{0, 0, 0, 0}, math.MaxFloat64
+	}
+	nearestT, index := nearestIntersection(t.rayCast, s)
 	if index < 0 {
-		return t.color, nearestT
+		return floatColor{0, 0, 0, 0}, nearestT
 	}
-
 	if t.reflections <= 0 {
-		return t.color, nearestT
+		return floatColor{0, 0, 0, 0}, nearestT
 	}
 
-	reflection, c, reflectance, normal := s.shapes[index].reflect(ray, nearestT, s)
+	incident, reflectionParams, c, normal := s.shapes[index].reflect(nearestT, t, s)
 	lightVal := s.ambientLight
 	m := s.shapes[index].getMaterial()
 	for _, light := range s.lights {
-		toRay, attenuation := light.light(reflection, normal, s)
+		toRay, attenuation := light.light(incident, normal, s)
 
 		diffuse := 0.0
 		if m.diffuse > 0.0 {
@@ -59,20 +69,20 @@ func trace(ray ray, t traceParams, s scene) (color.RGBA, float64) {
 		specular := 0.0
 		if m.specular > 0.0 {
 			// Calculate the light reflection for specular lighting
-			halfway := addVectors(ray.dir.neg(), toRay.dir).norm()
+			halfway := addVectors(t.rayCast.dir.neg(), toRay.dir).norm()
 			specular = m.specular * attenuation * math.Pow(math.Max(0.0, dotProduct(halfway, normal)), m.hardness)
 		}
 
 		lightVal += specular + diffuse
 	}
 
-	t.reflections--
-	t.color = addColor(t.color, scaleColor(scaleColor(c, t.reflectance), lightVal))
-	t.reflectance *= reflectance
-	if reflectance < reflectanceThreshold {
-		return t.color, nearestT
+	var outColors []floatColor
+	for _, newParam := range reflectionParams {
+		newColor, _ := trace(newParam, s)
+		outColors = append(outColors, newColor)
 	}
+	// outColor := c.scale(t.reflectance, lightVal).add(meanColor(outColors))
+	outColor := meanColor(outColors).add(c.scale(t.reflectance, lightVal))
 
-	outColor, _ := trace(reflection, t, s)
 	return outColor, nearestT
 }

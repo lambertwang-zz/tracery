@@ -33,6 +33,14 @@ func dotProduct(lhs vector, rhs vector) float64 {
 	return lhs.x*rhs.x + lhs.y*rhs.y + lhs.z*rhs.z
 }
 
+func crossProduct(lhs vector, rhs vector) vector {
+	return vector{
+		lhs.y*rhs.z - lhs.z*rhs.y,
+		lhs.z*rhs.x - lhs.x*rhs.z,
+		lhs.x*rhs.y - lhs.y*rhs.x,
+	}
+}
+
 func (v vector) scale(scalar float64) vector {
 	return vector{v.x * scalar, v.y * scalar, v.z * scalar}
 }

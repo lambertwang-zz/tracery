@@ -1,7 +1,6 @@
 package main
 
 import (
-	"image/color"
 	"math"
 )
 
@@ -15,31 +14,59 @@ func (p plane) shouldTest(ray ray) bool {
 	return true
 }
 
-func (p plane) intersect(ray ray) (float64, float64) {
-	denom := dotProduct(ray.dir, p.normal)
+func planeIntersect(normal vector, dist float64, ray ray) float64 {
+	denom := dotProduct(ray.dir, normal)
 	if denom >= 0 {
-		return -1, -1
+		return -1
 	}
-	return -(dotProduct(ray.origin, p.normal) + p.dist) / denom, math.MaxFloat64
+	t := -(dotProduct(ray.origin, normal) + dist) / denom
+	incident := ray.incident(t)
+	if incident.z > 20 {
+		return -1
+	}
+	return t
 }
 
-func (p plane) reflect(x ray, t float64, sc scene) (ray, color.RGBA, float64, vector) {
-	incident := addVectors(x.origin, x.dir.scale(t))
+func (p plane) intersect(ray ray) float64 {
+	return planeIntersect(p.normal, p.dist, ray)
+}
+
+func (p plane) reflect(t float64, params traceParams, sc scene) (vector, []traceParams, floatColor, vector) {
+	x := params.rayCast
+	incident := x.incident(t)
 	outColor := p.color
-	_, modx := math.Modf(incident.x + 100)
-	_, modz := math.Modf(incident.z + 100)
+	divx, modx := math.Modf(incident.x + 100)
+	divy, modz := math.Modf(incident.z + 100)
 	if (modx-0.5)*(modz-0.5) > 0 {
-		outColor = scaleColor(p.color, .6)
+		_, red := math.Modf((128 + 16*divx) / 256)
+		_, green := math.Modf((128 + 16*divy) / 256)
+		outColor = floatColor{
+			red * 256,
+			green * 256,
+			0, 1.0,
+		}
+	} else {
+		outColor = floatColor{
+			255,
+			255,
+			255,
+			1.0,
+		}
 	}
 	reflection := subtractVector(x.dir, p.normal.scale(2*(dotProduct(p.normal, x.dir))))
 
 	if incident.z > 20 {
-		outColor = color.RGBA{0, 0, 0, 255}
+		outColor = floatColor{255, 255, 255, 1.0}
 	} else if incident.z > 10 {
-		outColor = scaleColor(outColor, (20-incident.z)/10)
+		outColor = outColor.scale((20 - incident.z) / 10)
 	}
 
-	return ray{incident, reflection}, outColor, p.reflectance, p.normal
+	return incident, []traceParams{traceParams{
+		ray{incident, reflection},
+		params.reflections - 1,
+		params.reflectance * p.reflectance,
+		params.refractance,
+	}}, outColor.scale(params.reflectance), p.normal
 }
 
 func (p plane) getMaterial() material {

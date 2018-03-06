@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	defaultWidth  = 128
-	defaultHeight = 128
+	defaultWidth  = 512
+	defaultHeight = 512
 )
 
 type options struct {

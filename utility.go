@@ -6,6 +6,10 @@ import (
 	"strconv"
 )
 
+type floatColor struct {
+	r, g, b, a float64
+}
+
 func floatStr(f float64) string {
 	return strconv.FormatFloat(f, 'f', -1, 64)
 }
@@ -16,35 +20,39 @@ func vecStr(v vector) string {
 		", z = " + floatStr(v.z)
 }
 
-func meanColor(colors []color.RGBA) color.RGBA {
-	var r, g, b, a int
+func meanColor(colors []floatColor) floatColor {
+	var r, g, b, a float64
 
 	for _, c := range colors {
-		r += int(c.R)
-		g += int(c.G)
-		b += int(c.B)
-		a += int(c.A)
+		r += c.r
+		g += c.g
+		b += c.b
+		a += c.a
 	}
-	r /= len(colors)
-	g /= len(colors)
-	b /= len(colors)
-	a /= len(colors)
+	r /= float64(len(colors))
+	g /= float64(len(colors))
+	b /= float64(len(colors))
+	a /= float64(len(colors))
 
-	return color.RGBA{
-		uint8(r),
-		uint8(g),
-		uint8(b),
-		uint8(a),
+	return floatColor{
+		r,
+		g,
+		b,
+		a,
 	}
 }
 
-func scaleColor(c color.RGBA, f float64) color.RGBA {
-	scale := math.Max(0.0, f)
-	return color.RGBA{
-		uint8(math.Min(float64(c.R)*scale, 255)),
-		uint8(math.Min(float64(c.G)*scale, 255)),
-		uint8(math.Min(float64(c.B)*scale, 255)),
-		c.A,
+func (a floatColor) scale(f ...float64) floatColor {
+	scale := 1.0
+	for _, val := range f {
+		scale *= val
+	}
+	scale = math.Max(0.0, scale)
+	return floatColor{
+		a.r * scale,
+		a.g * scale,
+		a.b * scale,
+		a.a,
 	}
 }
 
@@ -55,10 +63,40 @@ func clamp16to8(x uint16) uint8 {
 	return uint8(x)
 }
 
-func addColor(lhs color.RGBA, rhs color.RGBA) color.RGBA {
-	r := clamp16to8(uint16(lhs.R) + uint16(rhs.R))
-	g := clamp16to8(uint16(lhs.G) + uint16(rhs.G))
-	b := clamp16to8(uint16(lhs.B) + uint16(rhs.B))
-	a := clamp16to8(uint16(lhs.A) + uint16(rhs.A))
-	return color.RGBA{r, g, b, a}
+func (a floatColor) add(b floatColor) floatColor {
+	// Composite a over b
+	/*
+		inv := b.a * (1 - a.a)
+		denom := 1 / (a.a + inv)
+		return floatColor{
+			(a.r*a.a + b.r*inv) * denom,
+			(a.g*a.a + b.g*inv) * denom,
+			(a.b*a.a + b.b*inv) * denom,
+			denom,
+		}
+	*/
+	return floatColor{
+		(a.r*a.a + b.r*b.a),
+		(a.g*a.a + b.g*b.a),
+		(a.b*a.a + b.b*b.a),
+		math.Max(a.a, b.a),
+	}
+}
+
+func rgbaToFloat(a color.RGBA) floatColor {
+	return floatColor{
+		float64(a.R),
+		float64(a.G),
+		float64(a.B),
+		float64(a.A) / 255.0,
+	}
+}
+
+func (a floatColor) toRgba() color.RGBA {
+	return color.RGBA{
+		uint8(math.Max(math.Min(255, a.r), 0)),
+		uint8(math.Max(math.Min(255, a.g), 0)),
+		uint8(math.Max(math.Min(255, a.b), 0)),
+		uint8(math.Max(math.Min(255, a.a*255), 0)),
+	}
 }

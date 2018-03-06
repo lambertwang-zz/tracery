@@ -5,7 +5,6 @@ import (
 	"image"
 	"image/color"
 	"image/png"
-	"math"
 	"os"
 	"sync"
 	"time"
@@ -23,7 +22,7 @@ func main() {
 		float64(0.196117*-2) / float64(options.height),
 	}
 
-	aperture := math.Sqrt(float64(options.width*options.height)) / 64.0
+	// aperture := math.Sqrt(float64(options.width*options.height)) / 64.0
 
 	samples := castQuad(
 		vector{0, 2, -8},
@@ -33,8 +32,8 @@ func main() {
 		options.width,
 		options.height,
 		// []sampleMethod{createRgssSampler()},
-		// []sampleMethod{},
-		[]sampleMethod{createRgssSampler(), createDofSampler(5, 3, aperture)},
+		[]sampleMethod{},
+		// []sampleMethod{createRgssSampler(), createDofSampler(5, 3, aperture)},
 		// []sampleMethod{createDofSampler(5, 3, aperture)},
 	)
 	/*
