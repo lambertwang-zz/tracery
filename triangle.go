@@ -86,7 +86,3 @@ func (t triangle) reflect(x ray, t0 float64, sc scene) (vector, []vector, floatC
 
 	return incident, []vector{reflection}, outColor, t.reflectance, normal
 }
-
-func (t triangle) getMaterial() material {
-	return t.material
-}

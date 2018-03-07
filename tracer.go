@@ -8,19 +8,18 @@ import (
 const reflectanceThreshold = 0.01
 
 type traceParams struct {
-	rayCast     ray
-	reflections int
-	reflectance float64
-	refractance float64
+	rayCast ray
+	depth   int
+	value   float64
 }
 
 func traceSample(sa sample, t traceParams, s scene) (color.RGBA, float64) {
-	c := make([]floatColor, len(sa.casts))
+	c := make([]floatColor, len(sa.dispatchedRays))
 
 	outDepth := -1.0
-	for i, r := range sa.casts {
+	for i, r := range sa.dispatchedRays {
 		newParams := traceParams{
-			r, t.reflections, t.reflectance, t.refractance,
+			r, t.depth, t.value,
 		}
 		c[i], outDepth = trace(newParams, s)
 	}
@@ -44,45 +43,63 @@ func nearestIntersection(r ray, s scene) (nearestT float64, index int) {
 }
 
 func trace(t traceParams, s scene) (floatColor, float64) {
-	if t.reflectance <= 0.001 {
+	if t.value <= 0.001 {
 		return floatColor{0, 0, 0, 0}, math.MaxFloat64
 	}
 	nearestT, index := nearestIntersection(t.rayCast, s)
 	if index < 0 {
-		return floatColor{0, 0, 0, 0}, nearestT
+		return floatColor{0, 0, 0, 1.0}, nearestT
 	}
-	if t.reflections <= 0 {
-		return floatColor{0, 0, 0, 0}, nearestT
+	if t.depth <= 0 {
+		return floatColor{0, 0, 0, 1.0}, nearestT
 	}
 
-	incident, reflectionParams, c, normal := s.shapes[index].reflect(nearestT, t, s)
-	lightVal := s.ambientLight
+	incident, normal := s.shapes[index].traceTo(nearestT, t)
+
 	m := s.shapes[index].getMaterial()
+
+	reflectionColor := floatColor{0, 0, 0, 0}
+	reflectionDir := s.shapes[index].reflect(incident, normal, t.rayCast.dir, s)
+	if m.reflectance > 0.001 {
+		reflectionTrace := traceParams{
+			ray{incident, reflectionDir},
+			t.depth - 1,
+			t.value * m.reflectance,
+		}
+		reflectionColor, _ = trace(reflectionTrace, s)
+	}
+	refractionColor := floatColor{0, 0, 0, 0}
+	if m.refractionIndex > 0.001 {
+		refractionDir := s.shapes[index].refract(incident, normal, t.rayCast.dir, s)
+		refractionTrace := traceParams{
+			ray{incident, refractionDir},
+			t.depth - 1,
+			t.value,
+		}
+		refractionColor, _ = trace(refractionTrace, s)
+	}
+	phongColor := s.shapes[index].sampleC(incident, normal, t.rayCast.dir, s)
+
+	outColor := phongColor.scale(s.ambientLight)
 	for _, light := range s.lights {
 		toRay, attenuation := light.light(incident, normal, s)
 
-		diffuse := 0.0
 		if m.diffuse > 0.0 {
-			diffuse = m.diffuse * attenuation * math.Max(0, dotProduct(normal, toRay.dir))
+			diffuse := m.diffuse * attenuation * math.Max(0, dotProduct(normal, toRay.dir))
+			outColor = outColor.add(phongColor.scale(diffuse))
 		}
-		// Blinn-Phon shading
-		specular := 0.0
+		// Blinn-Phong shading
 		if m.specular > 0.0 {
 			// Calculate the light reflection for specular lighting
 			halfway := addVectors(t.rayCast.dir.neg(), toRay.dir).norm()
-			specular = m.specular * attenuation * math.Pow(math.Max(0.0, dotProduct(halfway, normal)), m.hardness)
+			specular := m.specular * attenuation * math.Pow(math.Max(0.0, dotProduct(halfway, normal)), m.hardness)
+			// specular := m.specular * attenuation * math.Pow(math.Max(0.0, dotProduct(toRay.dir, t.rayCast.dir)), m.hardness)
+			// specular = 0
+			outColor = outColor.add(light.getColor().scale(specular))
 		}
-
-		lightVal += specular + diffuse
 	}
 
-	var outColors []floatColor
-	for _, newParam := range reflectionParams {
-		newColor, _ := trace(newParam, s)
-		outColors = append(outColors, newColor)
-	}
-	// outColor := c.scale(t.reflectance, lightVal).add(meanColor(outColors))
-	outColor := meanColor(outColors).add(c.scale(t.reflectance, lightVal))
-
+	outColor = outColor.add(reflectionColor).add(refractionColor).scale(t.value)
+	// outColor = phongColor.scale(t.value, lightVal)
 	return outColor, nearestT
 }

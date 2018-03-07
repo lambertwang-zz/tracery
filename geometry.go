@@ -18,15 +18,13 @@ type ray struct {
 func addVectors(vecs ...vector) (out vector) {
 	out = vector{0, 0, 0}
 	for _, v := range vecs {
-		out.x += v.x
-		out.y += v.y
-		out.z += v.z
+		out = out.plus(v)
 	}
 	return
 }
 
 func subtractVector(lhs vector, rhs vector) vector {
-	return vector{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z}
+	return lhs.minus(rhs)
 }
 
 func dotProduct(lhs vector, rhs vector) float64 {
@@ -39,6 +37,14 @@ func crossProduct(lhs vector, rhs vector) vector {
 		lhs.z*rhs.x - lhs.x*rhs.z,
 		lhs.x*rhs.y - lhs.y*rhs.x,
 	}
+}
+
+func (v vector) plus(rhs vector) vector {
+	return vector{v.x + rhs.x, v.y + rhs.y, v.z + rhs.z}
+}
+
+func (v vector) minus(rhs vector) vector {
+	return vector{v.x - rhs.x, v.y - rhs.y, v.z - rhs.z}
 }
 
 func (v vector) scale(scalar float64) vector {

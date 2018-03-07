@@ -6,4 +6,5 @@ type light interface {
 	// Note: ray.dir is not used
 	// Accepts the incident, surface normal, and the scene
 	light(vector, vector, scene) (ray, float64)
+	getColor() floatColor
 }

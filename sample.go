@@ -3,45 +3,51 @@ package main
 import "math/rand"
 
 type sample struct {
-	casts []ray
+	dispatchedRays []ray
 }
 
 type sampleMethod func(vector, vector, vector, vector, *[]ray)
 
-func castQuad(origin vector, corner vector, dx vector, dy vector, stepsX int, stepsY int, samplers []sampleMethod) []sample {
-	rayCasts := make([]sample, stepsX*stepsY)
+func sampleSingle(origin vector, corner vector, dx vector, dy vector, x int, y int, samplers []sampleMethod) (outSample sample) {
+	target := addVectors(
+		corner,
+		dx.scale(float64(x)),
+		dy.scale(float64(y)),
+	)
+	rays := []ray{
+		ray{origin, target},
+	}
+
+	for _, sampler := range samplers {
+		var newRays []ray
+		for _, r := range rays {
+			sampler(r.origin, r.dir, dx, dy, &newRays)
+		}
+		rays = nil
+		rays = make([]ray, len(newRays))
+		copy(rays, newRays)
+	}
+
+	for _, r := range rays {
+		outSample.dispatchedRays = append(
+			outSample.dispatchedRays,
+			lineToRay(r.origin, r.dir),
+		)
+	}
+
+	return
+}
+
+func sampleQuad(origin vector, corner vector, dx vector, dy vector, stepsX int, stepsY int, samplers []sampleMethod) []sample {
+	samples := make([]sample, stepsX*stepsY)
 
 	for y := 0; y < stepsY; y++ {
 		for x := 0; x < stepsX; x++ {
-			target := addVectors(
-				corner,
-				dx.scale(float64(x)),
-				dy.scale(float64(y)),
-			)
-			samples := []ray{
-				ray{origin, target},
-			}
-
-			for _, sampler := range samplers {
-				var newSamples []ray
-				for _, line := range samples {
-					sampler(line.origin, line.dir, dx, dy, &newSamples)
-				}
-				samples = nil
-				samples = make([]ray, len(newSamples))
-				copy(samples, newSamples)
-			}
-
-			for _, sample := range samples {
-				rayCasts[y*stepsX+x].casts = append(
-					rayCasts[y*stepsX+x].casts,
-					lineToRay(sample.origin, sample.dir),
-				)
-			}
+			samples[y*stepsX+x] = sampleSingle(origin, corner, dx, dy, x, y, samplers)
 		}
 	}
 
-	return rayCasts
+	return samples
 }
 
 func createRgssSampler() sampleMethod {
