@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math/rand"
 	"os"
 	"sync"
 	"time"
@@ -43,46 +44,23 @@ func main() {
 	)
 	mw := new(mainWindow)
 
-	overlap := 3.0
+	var overlap float64 = 3
 	shapes := []shape{
-		sphere{
-			createMaterial(color.RGBA{255, 128, 192, 255}, 0.8, 1.0, 1.0, 64, 1.0),
-			vector{0, 0, 8},
-			.5,
+		plane{
+			createMaterial(color.RGBA{192, 192, 192, 255}, 0.3, 1.0, 0.0, 0, 0.0),
+			vector{0, 1, 0},
+			0,
 		},
-		createTriangle(
-			createMaterial(color.RGBA{192, 192, 255, 255}, 0, 1.0, 1.0, 32, 0),
-			vector{-2, 0, 8 + overlap},
-			vector{-2, 2, 8},
-			vector{1, 1, 8 - overlap},
-		),
-		createTriangle(
-			createMaterial(color.RGBA{255, 192, 255, 255}, 0, 1.0, 1.0, 32, 0),
-			vector{0, 2, 8 + overlap},
-			vector{2, 2, 8},
-			vector{1, -1, 8 - overlap},
-		),
-		createTriangle(
-			createMaterial(color.RGBA{255, 255, 192, 255}, 0, 1.0, 1.0, 32, 0),
-			vector{2, 0, 8 + overlap},
-			vector{2, -2, 8},
-			vector{-1, -1, 8 - overlap},
-		),
-		createTriangle(
-			createMaterial(color.RGBA{192, 255, 255, 255}, 0, 1.0, 1.0, 32, 0),
-			vector{0, -2, 8 + overlap},
-			vector{-2, -2, 8},
-			vector{-1, 1, 8 - overlap},
-		),
 	}
 
-	// cubeModel := loadObjModel("cube.obj")
-	/*
-		cubeModel := loadObjModel("teapot.obj")
-		for _, tri := range cubeModel.toShapes() {
-			shapes = append(shapes, tri)
-		}
-	*/
+	rand.Seed(4332)
+	for i := 0; i < 100; i++ {
+		shapes = append(shapes, sphere{
+			createMaterial(color.RGBA{192, 192, 255, 255}, 0.8, 1.0, 1.0, 32, 0.0),
+			vector{rand.Float64()*8 - 4, 0.3, rand.Float64() * 16},
+			0.3,
+		})
+	}
 
 	sceneBounds := aabb{
 		[3]slab{
@@ -97,28 +75,28 @@ func main() {
 		shapes: shapes,
 		lights: []light{
 			pointLight{
-				vector{2, 2, 0}, 10,
+				vector{4, 5, 4}, 10,
 				floatColor{255, 192, 0, 1.0},
 			},
 			pointLight{
-				vector{-3, 1, 0}, 8,
+				vector{-3, 3, -5}, 8,
 				floatColor{0, 255, 192, 1.0},
 			},
 		},
-		ambientLight: 0.3,
+		ambientLight: 0.1,
 		bvh:          constructHeirarchy(&shapes, sceneBounds),
 	}
 
-	castOrigin := vector{0, 0, 0}
-	castCorner := vector{-1, 1, 3}
+	castOrigin := vector{0, 2, -8}
+	castCorner := vector{-1, 1 + 0.980580, -3 + 0.196117}
 	dx := vector{float64(2) / float64(opts.width), 0, 0}
-	dy := vector{0, float64(-2) / float64(opts.width), 0}
-	// aperture := math.Sqrt(float64(options.width*options.height)) / 64.0
+	dy := vector{
+		0,
+		float64(0.980580*-2) / float64(opts.width),
+		float64(0.196117*-2) / float64(opts.height),
+	}
 
-	samplers := []sampleMethod{}
-	// []sampleMethod{createDofSampler(5, 2, aperture)},
-	// samplers = []sampleMethod{createRgssSampler(), createDofSampler(5, 3, 8)}
-	// samplers = []sampleMethod{createRgssSampler()}
+	samplers := []sampleMethod{createRgssSampler(), createDofSampler(5, 3, 12)}
 
 	colors := make([]color.RGBA, opts.width*opts.height)
 

@@ -36,3 +36,14 @@ func (s sphere) traceTo(t float64, params traceParams) (incident vector, normal 
 	normal = subtractVector(incident, s.center).norm()
 	return
 }
+
+func (s sphere) bounds(sceneBounds aabb) aabb {
+	return aabb{
+		[3]slab{
+			slab{-s.center.x - s.radius, -s.center.x + s.radius, vector{1, 0, 0}},
+			slab{-s.center.y - s.radius, -s.center.y + s.radius, vector{0, 1, 0}},
+			slab{-s.center.z - s.radius, -s.center.z + s.radius, vector{0, 0, 1}},
+		},
+		s.center,
+	}
+}

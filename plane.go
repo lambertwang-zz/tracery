@@ -10,21 +10,13 @@ type plane struct {
 	dist   float64
 }
 
-func (p plane) shouldTest(ray ray) bool {
-	return true
-}
-
-func planeIntersect(normal vector, dist float64, ray ray) float64 {
+func planeIntersect(normal vector, dist float64, ray ray) (t float64) {
 	denom := dotProduct(ray.dir, normal)
 	if denom >= 0 {
 		return -1
 	}
-	t := -(dotProduct(ray.origin, normal) + dist) / denom
-	incident := ray.incident(t)
-	if incident.z > 20 {
-		return -1
-	}
-	return t
+	t = -(dotProduct(ray.origin, normal) + dist) / denom
+	return
 }
 
 func (p plane) intersect(ray ray) float64 {
@@ -67,11 +59,9 @@ func (p plane) sampleC(incident, normal, dir vector, sc scene) floatColor {
 		}
 	}
 
-	if incident.z > 20 {
-		outColor = floatColor{0, 0, 0, 1.0}
-	} else if incident.z > 10 {
-		outColor = outColor.scale((20 - incident.z) / 10)
-	}
-
 	return outColor
+}
+
+func (p plane) bounds(sceneBounds aabb) aabb {
+	return sceneBounds
 }

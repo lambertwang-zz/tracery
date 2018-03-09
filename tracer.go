@@ -26,40 +26,64 @@ func traceSample(sa sample, t traceParams, s scene) (color.RGBA, float64) {
 	return meanColor(c).toRgba(), outDepth
 }
 
-func nearestIntersection(r ray, s scene) (nearestT float64, index int) {
-	nearestT = math.MaxFloat64
-	index = -1
-	for i, shape := range s.shapes {
-		t := shape.intersect(r)
-		// Use some minimum distance the ray must travel before it can intersect
-		if t > 0.001 {
-			if t < nearestT {
+func nearestIntersection(r ray, s scene) (nearestT float64, nearestShape *shape) {
+	nearestT, nearestShape = checkBvh(r, s.bvh)
+	// Following code is before BVH
+	/*
+		nearestT = math.MaxFloat64
+		nearestShape = nil
+		for i, shape := range s.shapes {
+			t := shape.intersect(r)
+			if t > 0.001 && t < nearestT {
 				nearestT = t
-				index = i
+				nearestShape = &s.shapes[i]
+			}
+		}
+	*/
+	return
+}
+
+// Returns the nearestT and the shape intersected
+func checkBvh(r ray, n *bvhNode) (float64, *shape) {
+	intersectsBounds, _, _ := n.bounds.intersects(r)
+	if intersectsBounds {
+		if n.s == nil {
+			lhsT, lhsS := checkBvh(r, n.lhs)
+			rhsT, rhsS := checkBvh(r, n.rhs)
+			if lhsS != nil && lhsT < rhsT {
+				return lhsT, lhsS
+			}
+			if rhsS != nil {
+				return rhsT, rhsS
+			}
+		} else {
+			t := (*n.s).intersect(r)
+			if t > 0.001 {
+				return t, n.s
 			}
 		}
 	}
-	return
+	return math.MaxFloat64, nil
 }
 
 func trace(t traceParams, s scene) (floatColor, float64) {
 	if t.value <= 0.001 {
 		return floatColor{0, 0, 0, 0}, math.MaxFloat64
 	}
-	nearestT, index := nearestIntersection(t.rayCast, s)
-	if index < 0 {
+	nearestT, nearestShape := nearestIntersection(t.rayCast, s)
+	if nearestShape == nil {
 		return floatColor{0, 0, 0, 1.0}, nearestT
 	}
 	if t.depth <= 0 {
 		return floatColor{0, 0, 0, 1.0}, nearestT
 	}
 
-	incident, normal := s.shapes[index].traceTo(nearestT, t)
+	incident, normal := (*nearestShape).traceTo(nearestT, t)
 
-	m := s.shapes[index].getMaterial()
+	m := (*nearestShape).getMaterial()
 
 	reflectionColor := floatColor{0, 0, 0, 0}
-	reflectionDir := s.shapes[index].reflect(incident, normal, t.rayCast.dir, s)
+	reflectionDir := (*nearestShape).reflect(incident, normal, t.rayCast.dir, s)
 	if m.reflectance > 0.001 {
 		reflectionTrace := traceParams{
 			ray{incident, reflectionDir},
@@ -70,7 +94,7 @@ func trace(t traceParams, s scene) (floatColor, float64) {
 	}
 	refractionColor := floatColor{0, 0, 0, 0}
 	if m.refractionIndex > 0.001 {
-		refractionDir := s.shapes[index].refract(incident, normal, t.rayCast.dir, s)
+		refractionDir := (*nearestShape).refract(incident, normal, t.rayCast.dir, s)
 		refractionTrace := traceParams{
 			ray{incident, refractionDir},
 			t.depth - 1,
@@ -78,7 +102,7 @@ func trace(t traceParams, s scene) (floatColor, float64) {
 		}
 		refractionColor, _ = trace(refractionTrace, s)
 	}
-	phongColor := s.shapes[index].sampleC(incident, normal, t.rayCast.dir, s)
+	phongColor := (*nearestShape).sampleC(incident, normal, t.rayCast.dir, s)
 
 	outColor := phongColor.scale(s.ambientLight)
 	for _, light := range s.lights {

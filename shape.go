@@ -17,6 +17,9 @@ type shape interface {
 	// object at that point, the reflectance, and the normal
 	reflect(incident, normal, dir vector, sc scene) vector
 	refract(incident, normal, dir vector, sc scene) vector
+
+	// Takes in the scene max size and returns the aabb of the shape
+	bounds(aabb) aabb
 }
 
 type material struct {
@@ -45,6 +48,10 @@ func createMaterial(c color.RGBA, r float64, diff float64, spec float64, hard fl
 
 func (m material) getMaterial() material {
 	return m
+}
+
+func (m material) shouldTest(ray) bool {
+	return true
 }
 
 func (m material) sampleC(incident, normal, dir vector, sc scene) floatColor {
