@@ -7,5 +7,6 @@ RGSS
 Depth of Field  
 Diffuse and Specular Shading  
 
-![Tracery example](test_rgss_dof.png)
+![Tracery example](images/4_teapot.png)
+![Tracery example](images/5_vertexNormals.png)
 
