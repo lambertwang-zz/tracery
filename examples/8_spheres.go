@@ -15,8 +15,8 @@ func main() {
 
 	options := parseArgs(os.Args[1:])
 
-	dx := vector{float64(2) / float64(options.width), 0, 0}
-	dy := vector{
+	dx := Vector{float64(2) / float64(options.width), 0, 0}
+	dy := Vector{
 		0,
 		float64(0.980580*-2) / float64(options.width),
 		float64(0.196117*-2) / float64(options.height),
@@ -25,8 +25,8 @@ func main() {
 	// aperture := math.Sqrt(float64(options.width*options.height)) / 64.0
 
 	samples := castQuad(
-		vector{0, 2, -8},
-		vector{-1, 1 + 0.980580, -3 + 0.196117},
+		Vector{0, 2, -8},
+		Vector{-1, 1 + 0.980580, -3 + 0.196117},
 		dx,
 		dy,
 		options.width,
@@ -38,12 +38,12 @@ func main() {
 	)
 	/*
 		samples := castQuadDof(
-			// vector{0, 1, -3},
-			// vector{-1, 2, -2},
-			vector{0, 0, -8},
-			vector{-2, 2, -4},
-			vector{float64(4) / float64(options.width), 0, 0},
-			vector{0, float64(-4) / float64(options.height), 0},
+			// Vector{0, 1, -3},
+			// Vector{-1, 2, -2},
+			Vector{0, 0, -8},
+			Vector{-2, 2, -4},
+			Vector{float64(4) / float64(options.width), 0, 0},
+			Vector{0, float64(-4) / float64(options.height), 0},
 			options.width,
 			options.height,
 			6, 3, 4,
@@ -54,53 +54,53 @@ func main() {
 		shapes: []shape{
 			sphere{
 				material: defaultShader(color.RGBA{255, 0, 255, 255}, 0.8),
-				center:   vector{0, .5, 2},
+				center:   Vector{0, .5, 2},
 				radius:   .5,
 			},
 			sphere{
 				createMaterial(color.RGBA{255, 255, 0, 255}, 0.3, 0.8, 0.7, 4),
-				vector{-1.5, .4, 3},
+				Vector{-1.5, .4, 3},
 				0.4,
 			},
 			sphere{
 				createMaterial(color.RGBA{0, 255, 255, 255}, 0.9, 1.0, 1.0, 64),
-				vector{1.5, .6, 4.5},
+				Vector{1.5, .6, 4.5},
 				0.6,
 			},
 			sphere{
 				createMaterial(color.RGBA{128, 192, 255, 255}, 0.8, 1.0, 1.0, 32),
-				vector{-1, .3, 5.5},
+				Vector{-1, .3, 5.5},
 				0.3,
 			},
 			sphere{
 				createMaterial(color.RGBA{255, 128, 192, 255}, 0.8, 1.0, 1.0, 32),
-				vector{3, .7, 7.5},
+				Vector{3, .7, 7.5},
 				0.7,
 			},
 			sphere{
 				createMaterial(color.RGBA{255, 192, 192, 255}, 0.8, 1.0, 1.0, 32),
-				vector{.5, .3, 0},
+				Vector{.5, .3, 0},
 				0.3,
 			},
 			sphere{
 				createMaterial(color.RGBA{192, 255, 192, 255}, 0.8, 1.0, 1.0, 32),
-				vector{-.5, .3, -1},
+				Vector{-.5, .3, -1},
 				0.3,
 			},
 			sphere{
 				createMaterial(color.RGBA{192, 192, 255, 255}, 0.8, 1.0, 1.0, 32),
-				vector{1, .3, -1.5},
+				Vector{1, .3, -1.5},
 				0.3,
 			},
 			plane{
 				createMaterial(color.RGBA{192, 192, 192, 255}, 0.0, 1.0, 0.0, 0),
-				vector{0, 1, 0},
+				Vector{0, 1, 0},
 				0,
 			},
 		},
 		lights: []light{
-			pointLight{vector{2, 2, -2}, 10},
-			pointLight{vector{-1, 2, -3}, 5},
+			pointLight{Vector{2, 2, -2}, 10},
+			pointLight{Vector{-1, 2, -3}, 5},
 		},
 		ambientLight: 0.3,
 	}

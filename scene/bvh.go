@@ -1,4 +1,4 @@
-package main
+package scene
 
 import (
 	"fmt"
@@ -8,8 +8,8 @@ import (
 // Bounding volume heirarchy
 
 type bvhNode struct {
-	s        *shape
-	bounds   aabb
+	s        *Shape
+	bounds   Aabb
 	lhs, rhs *bvhNode
 }
 
@@ -18,13 +18,13 @@ type byYMean []bvhNode
 type byZMean []bvhNode
 
 func (s byXMean) Less(i, j int) bool {
-	return s[i].bounds.mean.x < s[j].bounds.mean.x
+	return s[i].bounds.Mean.X < s[j].bounds.Mean.X
 }
 func (s byYMean) Less(i, j int) bool {
-	return s[i].bounds.mean.y < s[j].bounds.mean.y
+	return s[i].bounds.Mean.Y < s[j].bounds.Mean.Y
 }
 func (s byZMean) Less(i, j int) bool {
-	return s[i].bounds.mean.z < s[j].bounds.mean.z
+	return s[i].bounds.Mean.Z < s[j].bounds.Mean.Z
 }
 func (s byXMean) Len() int      { return len(s) }
 func (s byXMean) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
@@ -50,7 +50,7 @@ func (b bvhNode) count() int {
 	return 1 + b.rhs.count() + b.lhs.count()
 }
 
-func constructHeirarchy(shapes *[]shape, sceneBounds aabb) *bvhNode {
+func constructHeirarchy(shapes *[]Shape, sceneBounds Aabb) *bvhNode {
 	bvhQueue := make([]bvhNode, len(*shapes))
 
 	for i, s := range *shapes {
@@ -63,7 +63,7 @@ func constructHeirarchy(shapes *[]shape, sceneBounds aabb) *bvhNode {
 	return constructBvhHelper(bvhQueue, sceneBounds, 0)
 }
 
-func constructBvhHelper(bvhQueue []bvhNode, sceneBounds aabb, depth int) *bvhNode {
+func constructBvhHelper(bvhQueue []bvhNode, sceneBounds Aabb, depth int) *bvhNode {
 	if len(bvhQueue) <= 0 {
 		panic("BVH Queue is empty!")
 	}

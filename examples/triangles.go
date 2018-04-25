@@ -47,32 +47,32 @@ func main() {
 	shapes := []shape{
 		sphere{
 			createMaterial(color.RGBA{255, 128, 192, 255}, 0.8, 1.0, 1.0, 64, 1.0),
-			vector{0, 0, 8},
+			Vector{0, 0, 8},
 			.5,
 		},
 		createTriangle(
 			createMaterial(color.RGBA{192, 192, 255, 255}, 0, 1.0, 1.0, 32, 0),
-			vector{-2, 0, 8 + overlap},
-			vector{-2, 2, 8},
-			vector{1, 1, 8 - overlap},
+			Vector{-2, 0, 8 + overlap},
+			Vector{-2, 2, 8},
+			Vector{1, 1, 8 - overlap},
 		),
 		createTriangle(
 			createMaterial(color.RGBA{255, 192, 255, 255}, 0, 1.0, 1.0, 32, 0),
-			vector{0, 2, 8 + overlap},
-			vector{2, 2, 8},
-			vector{1, -1, 8 - overlap},
+			Vector{0, 2, 8 + overlap},
+			Vector{2, 2, 8},
+			Vector{1, -1, 8 - overlap},
 		),
 		createTriangle(
 			createMaterial(color.RGBA{255, 255, 192, 255}, 0, 1.0, 1.0, 32, 0),
-			vector{2, 0, 8 + overlap},
-			vector{2, -2, 8},
-			vector{-1, -1, 8 - overlap},
+			Vector{2, 0, 8 + overlap},
+			Vector{2, -2, 8},
+			Vector{-1, -1, 8 - overlap},
 		),
 		createTriangle(
 			createMaterial(color.RGBA{192, 255, 255, 255}, 0, 1.0, 1.0, 32, 0),
-			vector{0, -2, 8 + overlap},
-			vector{-2, -2, 8},
-			vector{-1, 1, 8 - overlap},
+			Vector{0, -2, 8 + overlap},
+			Vector{-2, -2, 8},
+			Vector{-1, 1, 8 - overlap},
 		),
 	}
 
@@ -84,24 +84,24 @@ func main() {
 		}
 	*/
 
-	sceneBounds := aabb{
-		[3]slab{
-			slab{-1000, 1000, vector{1, 0, 0}},
-			slab{-1000, 1000, vector{0, 1, 0}},
-			slab{-1000, 1000, vector{0, 0, 1}},
+	sceneBounds := Aabb{
+		[3]Slab{
+			Slab{-1000, 1000, Vector{1, 0, 0}},
+			Slab{-1000, 1000, Vector{0, 1, 0}},
+			Slab{-1000, 1000, Vector{0, 0, 1}},
 		},
-		vector{0, 0, 0},
+		Vector{0, 0, 0},
 	}
 
 	scene := scene{
 		shapes: shapes,
 		lights: []light{
 			pointLight{
-				vector{2, 2, 0}, 10,
+				Vector{2, 2, 0}, 10,
 				floatColor{255, 192, 0, 1.0},
 			},
 			pointLight{
-				vector{-3, 1, 0}, 8,
+				Vector{-3, 1, 0}, 8,
 				floatColor{0, 255, 192, 1.0},
 			},
 		},
@@ -109,10 +109,10 @@ func main() {
 		bvh:          constructHeirarchy(&shapes, sceneBounds),
 	}
 
-	castOrigin := vector{0, 0, 0}
-	castCorner := vector{-1, 1, 3}
-	dx := vector{float64(2) / float64(opts.width), 0, 0}
-	dy := vector{0, float64(-2) / float64(opts.width), 0}
+	castOrigin := Vector{0, 0, 0}
+	castCorner := Vector{-1, 1, 3}
+	dx := Vector{float64(2) / float64(opts.width), 0, 0}
+	dy := Vector{0, float64(-2) / float64(opts.width), 0}
 	// aperture := math.Sqrt(float64(options.width*options.height)) / 64.0
 
 	samplers := []sampleMethod{}
@@ -138,7 +138,7 @@ func main() {
 				for y := startY; y < startY+batch && y < opts.height; y++ {
 					for x := startX; x < startX+batch && x < opts.width; x++ {
 						t := traceParams{
-							ray{vector{0, 0, 0}, vector{0, 0, 0}},
+							ray{Vector{0, 0, 0}, Vector{0, 0, 0}},
 							5, 1.0,
 						}
 						targetSample := sampleSingle(castOrigin, castCorner, dx, dy, x, y, samplers)

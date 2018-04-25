@@ -5,9 +5,14 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"os"
 	"sync"
 	"time"
+
+	g "github.com/lambertwang/tracery/geometry"
+	sc "github.com/lambertwang/tracery/scene"
+	tr "github.com/lambertwang/tracery/tracer"
 
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
@@ -23,6 +28,7 @@ type mainWindow struct {
 
 func (mw *mainWindow) renderImage(canvas *walk.Canvas, updateBounds walk.Rectangle) error {
 	bmp, _ := walk.NewBitmapFromImage(testImage)
+	defer bmp.Dispose()
 	canvas.DrawBitmapPart(
 		bmp,
 		walk.Rectangle{X: 0, Y: 0, Width: opts.width, Height: opts.height},
@@ -43,82 +49,79 @@ func main() {
 	)
 	mw := new(mainWindow)
 
-	shapes := []shape{
-		plane{
-			createMaterial(color.RGBA{192, 192, 192, 255}, 0.3, 1.0, 0.0, 0, 0.0),
-			vector{0, 1, 0},
+	shapes := []sc.Shape{
+	/*
+		sc.Plane{
+			sc.CreateMaterial(color.RGBA{192, 192, 192, 255}, 0.3, 1.0, 0.0, 0, 0.0),
+			g.Vector{Y: 1},
 			0,
 		},
+	*/
 	}
 
-	// cubeModel := loadObjModel("cube.obj")
-	// cubeModel := loadObjModel("teapot.obj")
-	cubeModel := loadObjModel("untitled.obj")
-	// cubeModel := loadObjModel("bunny.obj")
-	for _, tri := range cubeModel.toShapes() {
+	// cubeModel := loadObjModel("models/teapot.obj")
+	cubeModel := loadObjModel("models/bunny.obj")
+	for _, tri := range cubeModel.toShapes(
+		sc.CreateMaterial(color.RGBA{255, 128, 192, 255}, .6, 1.0, 1.0, 32, 0.0),
+		g.CreateRotate(math.Pi, g.Vector{X: 0, Y: 1, Z: 0}).Scale(2),
+		// g.CreateScale(0.05),
+		// g.CreateIdentity(),
+	) {
+		// for _, tri := range cubeModel.transformShapes(g.CreateRotate(math.Pi, g.Vector{X: 0, Y: 1, Z: 0})) {
 		shapes = append(shapes, tri)
 	}
 
-	sceneBounds := aabb{
-		[3]slab{
-			slab{-1000, 1000, vector{1, 0, 0}},
-			slab{-1000, 1000, vector{0, 1, 0}},
-			slab{-1000, 1000, vector{0, 0, 1}},
+	sceneBounds := sc.Aabb{
+		Slabs: [3]sc.Slab{
+			sc.Slab{-1000, 1000, g.Vector{1, 0, 0}},
+			sc.Slab{-1000, 1000, g.Vector{0, 1, 0}},
+			sc.Slab{-1000, 1000, g.Vector{0, 0, 1}},
 		},
-		vector{0, 0, 0},
+		Mean: g.Vector{0, 0, 0},
 	}
 
-	scene := scene{
-		shapes: shapes,
-		lights: []light{
-			pointLight{
-				vector{16, 10, -10}, 30,
-				floatColor{255, 192, 0, 1.0},
-			},
-			pointLight{
-				vector{-15, 11, -10}, 28,
-				floatColor{0, 255, 192, 1.0},
-			},
+	lights := []sc.Light{
+		sc.PointLight{
+			g.Vector{X: 16, Y: 10, Z: -10}, 30,
+			g.FloatColor{R: 255, G: 192, B: 0, A: 1.0},
 		},
-		ambientLight: 0.3,
-		bvh:          constructHeirarchy(&shapes, sceneBounds),
+		sc.PointLight{
+			g.Vector{-15, 11, -10}, 28,
+			g.FloatColor{0, 255, 192, 1.0},
+		},
 	}
 
-	castOrigin := vector{0.001, 2, -11}
-	castCorner := vector{-1.001, 3, -9}
-	dx := vector{float64(2) / float64(opts.width), 0, 0}
-	dy := vector{0, float64(-2) / float64(opts.width), 0}
+	scene := sc.CreateScene(&shapes, &lights, 0.3, sceneBounds)
+
+	castOrigin := g.Vector{0.001, 1, -7}
+	castCorner := g.Vector{-1.001, 2, -5}
+	dx := g.Vector{float64(2) / float64(opts.width), 0, 0}
+	dy := g.Vector{0, float64(-2) / float64(opts.width), 0}
 	// aperture := math.Sqrt(float64(options.width*options.height)) / 64.0
 
-	samplers := []sampleMethod{}
+	samplers := []tr.SampleMethod{}
 	// []sampleMethod{createDofSampler(5, 2, aperture)},
 	// samplers = []sampleMethod{createRgssSampler(), createDofSampler(9, 3, 16)}
-	samplers = []sampleMethod{createRgssSampler()}
+	samplers = []tr.SampleMethod{tr.CreateRgssSampler()}
 
-	colors := make([]color.RGBA, opts.width*opts.height)
-
+	batchSize := 64
 	var wg sync.WaitGroup
 
-	batchSize := 128
 	for j := 0; j < opts.height; j += batchSize {
 		for i := 0; i < opts.width; i += batchSize {
 			wg.Add(1)
-		}
-	}
-
-	for j := 0; j < opts.height; j += batchSize {
-		for i := 0; i < opts.width; i += batchSize {
 			go func(startX int, startY int, batch int) {
 				defer wg.Done()
+				t := sc.TraceParams{
+					RayCast: g.Ray{Origin: g.Vector{X: 0, Y: 0, Z: 0}, Dir: g.Vector{X: 0, Y: 0, Z: 0}},
+					Depth:   5,
+					Value:   1.0,
+				}
 				for y := startY; y < startY+batch && y < opts.height; y++ {
 					for x := startX; x < startX+batch && x < opts.width; x++ {
-						t := traceParams{
-							ray{vector{0, 0, 0}, vector{0, 0, 0}},
-							5, 1.0,
-						}
-						targetSample := sampleSingle(castOrigin, castCorner, dx, dy, x, y, samplers)
-						colors[y*opts.width+x], _ = traceSample(targetSample, t, scene)
-						testImage.Set(x, y, colors[y*opts.width+x])
+						targetSample := tr.SampleSingle(castOrigin, castCorner, dx, dy, x, y, samplers)
+						color, _ := tr.TraceSample(targetSample, t, scene)
+						testImage.Set(x, y, color)
 					}
 					// Update the widget
 					if mw.paintWidget != nil {
@@ -135,7 +138,6 @@ func main() {
 	go func() {
 		// Wait for all rendering batches to finish
 		wg.Wait()
-
 		elapsed := time.Since(start)
 		fmt.Printf("Raytracing completed after %s\n", elapsed)
 	}()
@@ -143,22 +145,10 @@ func main() {
 	MainWindow{
 		AssignTo: &mw.MainWindow,
 		Title:    "Tracery preview",
-		MinSize: Size{
-			Height: opts.width,
-			Width:  opts.height,
-		},
-		Size: Size{
-			Height: opts.width,
-			Width:  opts.height,
-		},
-		Layout: VBox{MarginsZero: true},
+		Size:     Size{Height: opts.width, Width: opts.height},
+		Layout:   VBox{MarginsZero: true},
 		Children: []Widget{
-			CustomWidget{
-				AssignTo:            &mw.paintWidget,
-				ClearsBackground:    true,
-				InvalidatesOnResize: true,
-				Paint:               mw.renderImage,
-			},
+			CustomWidget{AssignTo: &mw.paintWidget, Paint: mw.renderImage},
 		},
 	}.Run()
 

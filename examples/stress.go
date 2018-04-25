@@ -48,7 +48,7 @@ func main() {
 	shapes := []shape{
 		plane{
 			createMaterial(color.RGBA{192, 192, 192, 255}, 0.3, 1.0, 0.0, 0, 0.0),
-			vector{0, 1, 0},
+			Vector{0, 1, 0},
 			0,
 		},
 	}
@@ -57,29 +57,29 @@ func main() {
 	for i := 0; i < 100; i++ {
 		shapes = append(shapes, sphere{
 			createMaterial(color.RGBA{192, 192, 255, 255}, 0.8, 1.0, 1.0, 32, 0.0),
-			vector{rand.Float64()*8 - 4, 0.3, rand.Float64() * 16},
+			Vector{rand.Float64()*8 - 4, 0.3, rand.Float64() * 16},
 			0.3,
 		})
 	}
 
-	sceneBounds := aabb{
-		[3]slab{
-			slab{-1000, 1000, vector{1, 0, 0}},
-			slab{-1000, 1000, vector{0, 1, 0}},
-			slab{-1000, 1000, vector{0, 0, 1}},
+	sceneBounds := Aabb{
+		[3]Slab{
+			Slab{-1000, 1000, Vector{1, 0, 0}},
+			Slab{-1000, 1000, Vector{0, 1, 0}},
+			Slab{-1000, 1000, Vector{0, 0, 1}},
 		},
-		vector{0, 0, 0},
+		Vector{0, 0, 0},
 	}
 
 	scene := scene{
 		shapes: shapes,
 		lights: []light{
 			pointLight{
-				vector{4, 5, 4}, 10,
+				Vector{4, 5, 4}, 10,
 				floatColor{255, 192, 0, 1.0},
 			},
 			pointLight{
-				vector{-3, 3, -5}, 8,
+				Vector{-3, 3, -5}, 8,
 				floatColor{0, 255, 192, 1.0},
 			},
 		},
@@ -87,10 +87,10 @@ func main() {
 		bvh:          constructHeirarchy(&shapes, sceneBounds),
 	}
 
-	castOrigin := vector{0, 2, -8}
-	castCorner := vector{-1, 1 + 0.980580, -3 + 0.196117}
-	dx := vector{float64(2) / float64(opts.width), 0, 0}
-	dy := vector{
+	castOrigin := Vector{0, 2, -8}
+	castCorner := Vector{-1, 1 + 0.980580, -3 + 0.196117}
+	dx := Vector{float64(2) / float64(opts.width), 0, 0}
+	dy := Vector{
 		0,
 		float64(0.980580*-2) / float64(opts.width),
 		float64(0.196117*-2) / float64(opts.height),
@@ -116,7 +116,7 @@ func main() {
 				for y := startY; y < startY+batch && y < opts.height; y++ {
 					for x := startX; x < startX+batch && x < opts.width; x++ {
 						t := traceParams{
-							ray{vector{0, 0, 0}, vector{0, 0, 0}},
+							ray{Vector{0, 0, 0}, Vector{0, 0, 0}},
 							5, 1.0,
 						}
 						targetSample := sampleSingle(castOrigin, castCorner, dx, dy, x, y, samplers)

@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+
+	g "github.com/lambertwang/tracery/geometry"
+	sc "github.com/lambertwang/tracery/scene"
 )
 
 type face struct {
@@ -13,7 +16,7 @@ type face struct {
 }
 
 type model struct {
-	vecs, uvs, norms []vector
+	vecs, uvs, norms []g.Vector
 	faces            []face
 }
 
@@ -38,21 +41,21 @@ func loadObjModel(fileName string) (outModel model) {
 
 		switch prefix {
 		case "v":
-			v := vector{}
+			v := g.Vector{}
 			fmt.Sscanf(line, "%s %f %f %f\n", &prefix,
-				&v.x, &v.y, &v.z)
+				&v.X, &v.Y, &v.Z)
 			outModel.vecs = append(outModel.vecs, v)
 			break
 		case "vt":
-			v := vector{}
+			v := g.Vector{}
 			fmt.Sscanf(line, "%s %f %f %f\n", &prefix,
-				&v.x, &v.y)
+				&v.X, &v.Y)
 			outModel.uvs = append(outModel.uvs, v)
 			break
 		case "vn":
-			v := vector{}
+			v := g.Vector{}
 			fmt.Sscanf(line, "%s %f %f %f\n", &prefix,
-				&v.x, &v.y, &v.z)
+				&v.X, &v.Y, &v.Z)
 			outModel.norms = append(outModel.norms, v)
 			break
 		case "f":
@@ -87,6 +90,19 @@ func loadObjModel(fileName string) (outModel model) {
 				})
 				break
 			}
+			count, _ = fmt.Sscanf(line, "%s %d/%d %d/%d %d/%d", &prefix,
+				&vecI[0], &uvI[0],
+				&vecI[1], &uvI[1],
+				&vecI[2], &uvI[2],
+			)
+			if count == 7 {
+				outModel.faces = append(outModel.faces, face{
+					vecI[0] - 1, vecI[1] - 1, vecI[2] - 1,
+					uvI[0] - 1, uvI[1] - 1, uvI[2] - 1,
+					-1, -1, -1,
+				})
+				break
+			}
 
 			count, _ = fmt.Sscanf(line, "%s %d %d %d", &prefix,
 				&vecI[0], &vecI[1], &vecI[2],
@@ -99,6 +115,7 @@ func loadObjModel(fileName string) (outModel model) {
 					-1, -1, -1, -1, -1, -1,
 				})
 			}
+			panic("Unable to read face data")
 			break
 		case "#":
 		default:
@@ -109,20 +126,20 @@ func loadObjModel(fileName string) (outModel model) {
 	return
 }
 
-func (m model) toShapes() []triangle {
-	var outShapes []triangle
+func (m model) toShapes(mat sc.Material, t g.TMatrix3d) []sc.Triangle {
+	var outShapes []sc.Triangle
 
 	for _, f := range m.faces {
-		newTri := createTriangle(
-			defaultMaterial(),
-			m.vecs[f.vec0],
-			m.vecs[f.vec1],
-			m.vecs[f.vec2],
+		newTri := sc.CreateTriangle(
+			mat,
+			t.Transform(m.vecs[f.vec0]),
+			t.Transform(m.vecs[f.vec1]),
+			t.Transform(m.vecs[f.vec2]),
 		)
 		if f.norm0 >= 0 && f.norm1 >= 0 && f.norm2 >= 0 {
-			newTri.vertexNormals[0] = m.norms[f.norm0]
-			newTri.vertexNormals[1] = m.norms[f.norm1]
-			newTri.vertexNormals[2] = m.norms[f.norm2]
+			newTri.VertexNormals[0] = t.Transform(m.norms[f.norm0]).Norm()
+			newTri.VertexNormals[1] = t.Transform(m.norms[f.norm1]).Norm()
+			newTri.VertexNormals[2] = t.Transform(m.norms[f.norm2]).Norm()
 		}
 
 		outShapes = append(outShapes, newTri)
